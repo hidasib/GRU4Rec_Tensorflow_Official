@@ -1,2 +1,2 @@
-# Official PyTorch implementation of GRU4Rec
+# Official Tensorflow implementation of GRU4Rec
 Coming soon!
