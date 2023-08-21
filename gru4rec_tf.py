@@ -526,6 +526,7 @@ class GRU4Rec:
             self.model.GE.Bh0 = self.model.GE.Bh0.numpy()
         joblib.dump(self, path)
         #Putting the weights back to GPU after saving, in case the model is used in the same session
+        self.set_loss_function(self.loss)
         self.model.Wy.E = tf.Variable(self.model.Wy.E)
         self.model.By.E = tf.Variable(self.model.By.E)
         for i in range(len(self.model.G)):
