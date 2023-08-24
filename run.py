@@ -5,12 +5,7 @@ import shutil
 class MyHelpFormatter(argparse.HelpFormatter):
     def __init__(self, *args, **kwargs):
         super(MyHelpFormatter, self).__init__(*args, **kwargs)
-        try:
-            columns = int(os.popen('stty size', 'r').read().split()[1])
-        except:
-            columns = None
-        if columns is not None:
-            self._width = columns
+        self._width = shutil.get_terminal_size().columns
 
 parser = argparse.ArgumentParser(formatter_class=MyHelpFormatter, description='Train or load a GRU4Rec model & measure recall and MRR on the specified test set(s).')
 parser.add_argument('path', metavar='PATH', type=str, help='Path to the training data (TAB separated file (.tsv or .txt) or pickled pandas.DataFrame object (.pickle)) (if the --load_model parameter is NOT provided) or to the serialized model (if the --load_model parameter is provided).')
