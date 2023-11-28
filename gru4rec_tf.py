@@ -524,7 +524,23 @@ class GRU4Rec:
             self.model.GE.Wrz0 = self.model.GE.Wrz0.numpy()
             self.model.GE.Wh0 = self.model.GE.Wh0.numpy()
             self.model.GE.Bh0 = self.model.GE.Bh0.numpy()
+        #Saving optimizer state (might not be necessary, no training after loading is supported), TODO: put into AdagradM
+        self.opt_state = dict()
+        if hasattr(self.opt, '_acc'):
+            self.opt_state['_acc'] = []
+            for a in self.opt._acc:
+                self.opt_state['_acc'].append(a.numpy())
+        if hasattr(self.opt, '_mom'):
+            self.opt_state['_mom'] = []
+            for m in self.opt._mom:
+                self.opt_state['_mom'].append(m.numpy())
+        self.opt_config = self.opt.get_config()
+        opt = self.opt
+        self.opt = None
         joblib.dump(self, path)
+        self.opt = opt
+        self.opt_state = None
+        self.opt_config = None
         #Putting the weights back to GPU after saving, in case the model is used in the same session
         self.set_loss_function(self.loss)
         self.model.Wy.E = tf.Variable(self.model.Wy.E)
@@ -560,4 +576,17 @@ class GRU4Rec:
             gru.model.GE.Wrz0 = tf.Variable(gru.model.GE.Wrz0)
             gru.model.GE.Wh0 = tf.Variable(gru.model.GE.Wh0)
             gru.model.GE.Bh0 = tf.Variable(gru.model.GE.Bh0)
+        if hasattr(gru, 'opt_config'):
+            gru.opt = AdagradM.from_config(gru.opt_config)
+            if hasattr(gru, 'opt_state'):
+                if '_acc' in gru.opt_state:
+                    gru.opt._acc = []
+                    for a in gru.opt_state['_acc']:
+                        gru.opt._acc.append(tf.Variable(a))
+                if '_mom' in gru.opt_state:
+                    gru.opt._mom = []
+                    for m in gru.opt_state['_mom']:
+                        gru.opt._mom.append(tf.Variable(m))
+                gru.opt_state = None
+            gru.opt_config = None
         return gru
