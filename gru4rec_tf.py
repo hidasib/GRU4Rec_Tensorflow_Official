@@ -194,6 +194,28 @@ class AdagradM(tf.keras.optimizers.Optimizer):
             }
         )
         return config
+    
+    def get_state(self):
+        state = dict()
+        if hasattr(self, '_acc'):
+            state['_acc'] = []
+            for a in self._acc:
+                state['_acc'].append(a.numpy())
+        if hasattr(self, '_mom'):
+            state['_mom'] = []
+            for m in self._mom:
+                state['_mom'].append(m.numpy())
+        return state
+    
+    def set_state(self, state):
+        if '_acc' in state:
+            self._acc = []
+            for a in state['_acc']:
+                self._acc.append(tf.Variable(a))
+        if '_mom' in state:
+            self._mom = []
+            for m in state['_mom']:
+                self._mom.append(tf.Variable(m))
 
 def init_weights_2D(dim0, dim1, dim0_scale=1, dim1_scale=1):
     sigma = np.sqrt(6.0 / (dim0 / dim0_scale + dim1 / dim1_scale))
@@ -505,6 +527,7 @@ class GRU4Rec:
     
     def savemodel(self, path):
         #TF is stupid: the built in save doesn't work well with custom stuff & pickle/dill is unable to serialize some constructs -> falling back to moving weights to numpy and then saving
+        #TODO: move model state get/set to model
         self.loss_function = None
         self.model.Wy.E = self.model.Wy.E.numpy()
         self.model.Wy.EX = None
@@ -524,16 +547,8 @@ class GRU4Rec:
             self.model.GE.Wrz0 = self.model.GE.Wrz0.numpy()
             self.model.GE.Wh0 = self.model.GE.Wh0.numpy()
             self.model.GE.Bh0 = self.model.GE.Bh0.numpy()
-        #Saving optimizer state (might not be necessary, no training after loading is supported), TODO: put into AdagradM
-        self.opt_state = dict()
-        if hasattr(self.opt, '_acc'):
-            self.opt_state['_acc'] = []
-            for a in self.opt._acc:
-                self.opt_state['_acc'].append(a.numpy())
-        if hasattr(self.opt, '_mom'):
-            self.opt_state['_mom'] = []
-            for m in self.opt._mom:
-                self.opt_state['_mom'].append(m.numpy())
+        #Saving optimizer state (might not be necessary, no training after loading is supported)
+        self.opt_state = self.opt.get_state()
         self.opt_config = self.opt.get_config()
         opt = self.opt
         self.opt = None
@@ -579,14 +594,7 @@ class GRU4Rec:
         if hasattr(gru, 'opt_config'):
             gru.opt = AdagradM.from_config(gru.opt_config)
             if hasattr(gru, 'opt_state'):
-                if '_acc' in gru.opt_state:
-                    gru.opt._acc = []
-                    for a in gru.opt_state['_acc']:
-                        gru.opt._acc.append(tf.Variable(a))
-                if '_mom' in gru.opt_state:
-                    gru.opt._mom = []
-                    for m in gru.opt_state['_mom']:
-                        gru.opt._mom.append(tf.Variable(m))
+                gru.opt.set_state(gru.opt_state)
                 gru.opt_state = None
             gru.opt_config = None
         return gru
